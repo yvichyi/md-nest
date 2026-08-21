@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "md-nest"
+version = "0.1.0"
+description = "Markdown 知识库 AI 助手 — 零依赖、离线、可搜索、可问答"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Coomi" }]
+keywords = ["markdown", "knowledge-base", "search", "fts5", "cli"]
+dependencies = []
+
+[project.scripts]
+md-nest = "md_nest.search:main"
+
+[tool.setuptools.packages.find]
+include = ["md_nest*"]
