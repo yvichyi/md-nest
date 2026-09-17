@@ -103,7 +103,7 @@ def main():
         print(f"📚 {s['docs']} 篇 / {s['chars']} 字 / db {s['db']}B")
     elif cmd == "ask":
         from .ask import main as ask_main
-        ask_main(root, nest)
+        ask_main(root, nest, rest)
     else:
         query = " ".join([cmd] + rest)
         hits = nest.search(query)
