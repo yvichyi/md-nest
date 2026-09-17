@@ -23,11 +23,12 @@ def ask(nest, question, llm_script=None):
     except Exception as e:
         return f"(LLM 失败: {e})"
 
-def main(root, nest):
-    import sys
-    rest = sys.argv[1:]
+def main(root, nest, rest=None):
+    if rest is None:
+        import sys
+        rest = sys.argv[1:]
     question = " ".join(rest)
     if not question:
         print("用法: md-nest <目录> ask <问题>"); return
-    print(f"🤔 问题: {question}\n")
+    print(f"\U0001f914 问题: {question}\n")
     print(ask(nest, question))
