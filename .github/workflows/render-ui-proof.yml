@@ -42,7 +42,7 @@ jobs:
               var colors={'--cv-paper':'#fff0e4','--cv-paper-light':'#fff8f1','--cv-paper-deep':'#f0d9c8','--cv-disc':'#f7b17e','--cv-disc-light':'#ffd9b3','--cv-disc-deep':'#da885c','--cv-ink':'#251d1b','--cv-muted':'#887971','--cv-accent':'#eea25e','--cv-accent-dark':'#c57b45'};
               Object.keys(colors).forEach(function(k){root.setProperty(k,colors[k]);});
               var lines=['月光在窗边慢慢退去','我们听见夜色的呼吸','就在你身旁，一切变得温柔','时间开始向远处流淌','明天醒来，也仍有光'];
-              document.getElementById('lyricLines').innerHTML=lines.map(function(t,i){return '<p class="lyric-line'+(i===2?' active':'')+'"'+(i===2?' style="--line-fill:38%"':'')+'>'+t+'</p>';}).join('');
+              document.getElementById('lyricLines').innerHTML=lines.map(function(t,i){return '<p class="lyric-line'+(i===1?' active':'')+'"'+(i===1?' style="--line-fill:38%"':'')+'>'+t+'</p>';}).join('');
               document.getElementById('currentTime').textContent='01:24';
               document.getElementById('totalTime').textContent='03:48';
               document.getElementById('seekSlider').value='368';
