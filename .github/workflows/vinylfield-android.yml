@@ -36,6 +36,9 @@ jobs:
           gradle-version: '8.11.1'
       - name: Assemble debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Live upstream smoke check (diagnostic only)
+        continue-on-error: true
+        run: node tests/smoke_public_api.mjs
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
