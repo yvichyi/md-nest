@@ -337,7 +337,8 @@
     for (let i = 0; i < children.length; i++) children[i].classList.toggle('active', i === idx);
     if (idx >= 0 && children[idx]) {
       const line = children[idx];
-      const target = line.offsetTop - wrapper.offsetTop - (wrapper.clientHeight - line.clientHeight) * .5;
+      const lyricAlignment = matchMedia('(orientation:landscape)').matches ? .67 : .5;
+      const target = line.offsetTop - wrapper.offsetTop - (wrapper.clientHeight - line.clientHeight) * lyricAlignment;
       wrapper.scrollTo({top: Math.max(0, target), behavior: reducedMotion.matches ? 'instant' : 'smooth'});
     }
   }
