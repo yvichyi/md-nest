@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="cover-theme.css" />
   <link rel="stylesheet" href="immersive-motion.css" />
   <link rel="stylesheet" href="qq-landscape.css" />
+  <link rel="stylesheet" href="mobile-cai-jiao.css" />
 </head>
 <body>
   <svg width="0" height="0" aria-hidden="true" class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
@@ -91,7 +92,7 @@
     <footer class="transport">
       <div class="transport-row">
         <div class="transport-title"><div class="small-cover" id="miniCover">VF</div><div><strong id="miniTitle">未选择音乐</strong><span id="miniArtist">VINYL FIELD</span></div></div>
-        <div class="transport-controls"><button class="transport-icon" id="prevBtn" aria-label="上一首"><svg><use href="#i-prev"/></svg></button><button class="primary-play" id="playBtn" aria-label="播放或暂停"><svg id="playIcon"><use href="#i-play"/></svg></button><button class="transport-icon" id="nextBtn" aria-label="下一首"><svg><use href="#i-next"/></svg></button></div>
+        <div class="transport-controls"><button class="transport-icon" id="prevBtn" aria-label="上一首"><svg><use href="#i-prev"/></svg></button><button class="primary-play" id="playBtn" aria-label="播放或暂停"><svg id="playIcon"><use href="#i-play"/></svg></button><button class="transport-icon" id="nextBtn" aria-label="下一首"><svg><use href="#i-next"/></svg></button></div><button class="favorite-btn" id="favoriteBtn" type="button" aria-label="收藏当前歌曲到本地喜欢列表" aria-pressed="false"><svg viewBox="0 0 24 24"><use href="#i-heart"/></svg></button>
         <div class="transport-end"><div class="equalizer" id="equalizer"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span id="playbackState">READY TO PLAY</span></div>
       </div>
       <div class="seek-row"><span id="currentTime">00:00</span><input type="range" min="0" max="1000" value="0" id="seekSlider" aria-label="播放进度" style="--progress:0%"><span id="totalTime">00:00</span></div>
@@ -113,7 +114,9 @@
   <section class="overlay" id="queueOverlay" aria-hidden="true"><div class="panel-overlay" id="queueBackdrop"></div><div class="library-panel compact"><header class="panel-header"><div><small>UP NEXT</small><h2>播放队列</h2></div><button class="icon-button" id="closeQueue" aria-label="关闭"><svg><use href="#i-close"/></svg></button></header><p class="panel-hint">点按任意歌曲立即切换；按住曲目在后续版本中排序。</p><div id="queueResults" class="result-list"></div></div></section>
 
   <section class="overlay center-overlay" id="accountOverlay" aria-hidden="true"><div class="panel-overlay" id="accountBackdrop"></div><div class="account-modal"><button class="icon-button modal-close" id="closeAccount" aria-label="关闭"><svg><use href="#i-close"/></svg></button><span class="edition-tag">CONNECT YOUR LIBRARY</span><h2>连接网易云音乐</h2><p class="account-description">使用网易云音乐 App 扫码授权，随后同步歌单、搜索和有播放权限的曲目。</p><div class="qr-container" id="qrContainer"><div class="qr-placeholder"><svg><use href="#i-record"/></svg></div></div><p class="qr-status" id="qrStatus">点击下方按钮获取登录二维码</p><button class="panel-action full" id="startQr">获取登录二维码</button><div class="account-divider"><span>或手动导入自己的 Cookie（高级选项）</span></div><input id="cookieInput" type="password" placeholder="MUSIC_U=..." autocomplete="off"/><button class="secondary-action" id="cookieSubmit">导入 Cookie</button><button class="secondary-action danger" id="logoutBtn">清除账号登录</button><small class="privacy-note">凭据通过 Android Keystore 加密保存在设备内，不发送给 VINYL FIELD 服务器。本客户端为非官方应用，接口可能变动。</small></div></section>
+  <div class="rotation-hint" aria-label="请横屏使用彩胶播放器"><span class="rotate-icon">▯</span><strong>旋转手机，进入横屏彩胶模式</strong><small>唱片、歌词与播放控制为横屏重新设计</small></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
+  <script src="mobile-cai-jiao.js"></script>
 </body>
 </html>
