@@ -21,9 +21,16 @@ jobs:
           java-version: '17'
       - name: Configure Android SDK
         run: |
-          echo "ANDROID_HOME=${ANDROID_HOME:-${ANDROID_SDK_ROOT}}" >> "$GITHUB_ENV"
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> "$GITHUB_ENV"
+          SDKMANAGER="$(find "$SDK_DIR/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_DIR"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
