@@ -1,0 +1,27 @@
+name: Unpack VinylField sources for UI redesign
+on:
+  push:
+    branches: [vinylfield-qq-landscape-redesign]
+    paths:
+      - '.github/workflows/unpack-vinylfield.yml'
+permissions:
+  contents: write
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Expand original source archive as readable files
+        run: |
+          mkdir -p android-source
+          unzip -q -o VinylField-source.zip -d android-source
+          find android-source -type f | sort | head -80
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add android-source
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: expose Android sources for landscape redesign"
+            git push
+          fi
