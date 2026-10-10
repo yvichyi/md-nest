@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/render-ui-proof.yml'
       - 'android-source/app/src/main/assets/qq-landscape.css'
+      - 'android-source/app/src/main/assets/mobile-cai-jiao.css'
+      - 'android-source/app/src/main/assets/mobile-cai-jiao.js'
+      - 'android-source/app/src/main/assets/index.html'
 permissions:
   contents: write
 jobs:
@@ -58,7 +61,7 @@ jobs:
           test -n "$CHROME"
           mkdir -p design-qa
           URL="file://$(pwd)/android-source/app/src/main/assets/test-preview.html"
-          for row in "1280,720,landscape-1280x720" "844,390,landscape-844x390" "430,932,portrait-430x932"; do
+          for row in "915,412,phone-landscape-915x412" "844,390,phone-landscape-844x390" "740,360,compact-landscape-740x360" "430,932,portrait-rotate-hint"; do
             IFS=, read -r W H NAME <<< "$row"
             timeout 45 "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --allow-file-access-from-files --virtual-time-budget=1600 --window-size="$W,$H" --screenshot="design-qa/$NAME.png" "$URL"
             test -s "design-qa/$NAME.png"
