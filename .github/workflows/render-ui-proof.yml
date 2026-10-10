@@ -4,6 +4,7 @@ on:
     branches: [vinylfield-qq-landscape-redesign]
     paths:
       - '.github/workflows/render-ui-proof.yml'
+      - 'android-source/app/src/main/assets/qq-landscape.css'
 permissions:
   contents: write
 jobs:
@@ -12,6 +13,8 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+      - name: Install Chinese UI fonts for visual validation
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
       - name: Prepare non-network sample player state
         run: |
           python3 - <<'PY'
@@ -31,6 +34,8 @@ jobs:
               document.getElementById('songTitle').textContent='蓝色时刻 · Blue Hour';
               document.getElementById('songArtist').textContent='一场关于夜色的演奏';
               var root=document.documentElement.style;
+              root.transition='none';
+              document.getElementById('toast').style.display='none';
               var colors={'--cv-paper':'#edf1f1','--cv-paper-light':'#f8faf9','--cv-paper-deep':'#dce7e9','--cv-disc':'#7dacc4','--cv-disc-light':'#bbdce4','--cv-disc-deep':'#3e728e','--cv-ink':'#203447','--cv-muted':'#70838e','--cv-accent':'#6798b5','--cv-accent-dark':'#3d6680'};
               Object.keys(colors).forEach(function(k){root.setProperty(k,colors[k]);});
               var lines=['风穿过安静的街道','光落在深蓝色的海','此刻我们不必说话','让旋律替时间回答','世界在缓慢旋转'];
