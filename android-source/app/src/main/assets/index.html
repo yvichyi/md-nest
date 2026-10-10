@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f1e9e2" />
+  <title>VINYL FIELD — 自适应彩胶播放</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="cover-theme.css" />
+  <link rel="stylesheet" href="immersive-motion.css" />
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true" class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M5 5v14M19 5L8 12l11 7z" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M19 5v14M5 5l11 7-11 7z" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20 8c0 5-8 10-8 10S4 13 4 8a4 4 0 0 1 8-1 4 4 0 0 1 8 1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  </svg>
+  <div class="ambient-cover" id="ambientCover"></div>
+  <div class="grain"></div>
+  <main class="application">
+    <header class="topbar">
+      <button class="brand" id="homeBtn" aria-label="返回播放页">
+        <span class="brand-symbol"><span></span><span></span><span></span></span>
+        <span class="brand-word">VINYL<span>FIELD</span><small>THE LISTENING ROOM</small></span>
+      </button>
+      <div class="top-center"><span class="live-dot"></span><span id="topStatus">A SPACE FOR SOUND</span><span class="top-divider">/</span><span class="top-muted">33⅓ RPM</span></div>
+      <button class="tools-toggle" id="toolsToggle" type="button" aria-expanded="false" aria-controls="quickTools" aria-label="打开音乐工具菜单"><span></span><span></span><span></span></button>
+      <nav class="top-actions" id="quickTools" aria-label="音乐工具菜单">
+        <button class="text-button" id="searchBtn"><svg><use href="#i-search"/></svg><span>探索音乐</span></button>
+        <button class="text-button" id="queueBtn"><svg><use href="#i-list"/></svg><span>播放队列</span></button>
+        <button class="icon-button landscape-toggle" id="orientationBtn" aria-label="切换横屏"><svg><use href="#i-full"/></svg></button>
+        <button class="sub-control" id="shuffleBtn" title="切换随机播放" aria-label="随机播放">⇄</button>
+        <button class="sub-control" id="repeatBtn" title="切换循环模式" aria-label="循环模式">↻</button>
+        <button class="account-button" id="accountBtn" aria-label="账号">N</button>
+      </nav>
+    </header>
+
+    <section class="stage" id="stage" aria-label="播放舞台">
+      <div class="deck-column">
+        <div class="section-label"><span class="line"></span> ANALOGUE EXPERIENCE <span class="section-number">01 — 02</span></div>
+        <div class="deck-frame">
+          <div class="deck-screw screw-one"></div><div class="deck-screw screw-two"></div>
+          <div class="deck-edge"></div>
+          <div class="vinyl-halo" aria-hidden="true"></div>
+          <div class="vinyl-well">
+            <div class="vinyl" id="vinyl">
+              <div class="groove"></div>
+              <div class="record-label">
+                <img id="recordCover" alt="当前专辑封面" hidden />
+                <div class="record-monogram" id="recordMonogram"><small>VINYL FIELD</small><b>VF</b><span>STEREO • 33⅓</span></div>
+              </div>
+              <div class="spindle"></div>
+            </div>
+          </div>
+          <div class="tone-arm" id="toneArm"><div class="arm-pivot"></div><div class="arm-shaft"></div><div class="cartridge"></div></div>
+          <div class="deck-led"></div><div class="deck-model">VF — 001 <span>DIRECT DRIVE TURNTABLE</span></div>
+          <div class="speed-control"><span>33</span><div class="speed-indicator"></div><span>45</span></div>
+        </div>
+        <div class="deck-caption"><span class="spec-dot"></span><span id="deckCaption">等待下一段旋律</span><span class="caption-right">STEREO / DIGITAL</span></div>
+      </div>
+
+      <div class="story-column">
+        <div class="section-label"><span class="line"></span> NOW LISTENING <span class="section-number">02 — 02</span></div>
+        <div class="track-intro">
+          <span class="edition-tag" id="editionTag">THE SOUND OF STILLNESS</span>
+          <h1 id="songTitle">声音，是时间的另一种形状。</h1>
+          <p id="songArtist">选一首歌，让唱片开始转动。</p>
+        </div>
+        <div class="lyric-shell" id="lyricShell">
+          <div class="lyric-accent"></div>
+          <div class="lyric-lines" id="lyricLines">
+            <p class="lyric-line placeholder">在这里，音乐拥有重量。</p>
+            <p class="lyric-line placeholder active">把此刻交给一首歌。</p>
+            <p class="lyric-line placeholder">打开探索，开始聆听。</p>
+          </div>
+          <div class="lyric-bottom"></div>
+        </div>
+        <div class="track-meta"><div><span class="meta-caption">SOURCE</span><strong id="trackSource">YOUR LISTENING ROOM</strong></div><div><span class="meta-caption">FORMAT</span><strong id="trackFormat">STEREO</strong></div><div><span class="meta-caption">MODE</span><strong id="trackMode">REPEAT ALL</strong></div></div>
+      </div>
+    </section>
+
+    <footer class="transport">
+      <div class="transport-row">
+        <div class="transport-title"><div class="small-cover" id="miniCover">VF</div><div><strong id="miniTitle">未选择音乐</strong><span id="miniArtist">VINYL FIELD</span></div></div>
+        <div class="transport-controls"><button class="transport-icon" id="prevBtn" aria-label="上一首"><svg><use href="#i-prev"/></svg></button><button class="primary-play" id="playBtn" aria-label="播放或暂停"><svg id="playIcon"><use href="#i-play"/></svg></button><button class="transport-icon" id="nextBtn" aria-label="下一首"><svg><use href="#i-next"/></svg></button></div>
+        <div class="transport-end"><div class="equalizer" id="equalizer"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span id="playbackState">READY TO PLAY</span></div>
+      </div>
+      <div class="seek-row"><span id="currentTime">00:00</span><input type="range" min="0" max="1000" value="0" id="seekSlider" aria-label="播放进度" style="--progress:0%"><span id="totalTime">00:00</span></div>
+    </footer>
+  </main>
+
+  <section class="overlay" id="libraryOverlay" aria-hidden="true">
+    <div class="panel-overlay" id="libraryBackdrop"></div>
+    <div class="library-panel">
+      <header class="panel-header"><div><small>DISCOVERY & COLLECTION</small><h2>你的音乐宇宙</h2></div><button class="icon-button" id="closeLibrary" aria-label="关闭"><svg><use href="#i-close"/></svg></button></header>
+      <div class="tabs"><button data-tab="search" class="tab active">搜索音乐</button><button data-tab="playlists" class="tab">我的歌单</button><button data-tab="local" class="tab">本地音乐</button></div>
+      <div id="tabSearch" class="tab-pane"><form id="searchForm" class="search-input"><svg><use href="#i-search"/></svg><input id="searchInput" placeholder="歌曲、歌手、专辑..." autocomplete="off"/><button type="submit">搜索</button></form><p class="panel-hint" id="searchHint">接入网易云音乐，搜索你想听的声音。</p><div id="results" class="result-list"></div></div>
+      <div id="tabPlaylists" class="tab-pane" hidden><p class="panel-hint" id="playlistHint">扫码登录网易云音乐后同步你的歌单。</p><button class="panel-action" id="loadPlaylists">刷新我的歌单</button><div id="playlistResults" class="result-list"></div></div>
+      <div id="tabLocal" class="tab-pane" hidden><p class="panel-hint">本地文件不会上传服务器。支持系统文件选择器导入音频。</p><button class="panel-action" id="pickFile"><svg><use href="#i-plus"/></svg> 导入本地音乐</button><input type="file" id="browserFile" accept="audio/*" hidden/><div id="localResults" class="result-list"></div></div>
+      <div class="panel-footer">VINYL FIELD 0.1 <span>NO ADS · NO TRACKING</span></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="queueOverlay" aria-hidden="true"><div class="panel-overlay" id="queueBackdrop"></div><div class="library-panel compact"><header class="panel-header"><div><small>UP NEXT</small><h2>播放队列</h2></div><button class="icon-button" id="closeQueue" aria-label="关闭"><svg><use href="#i-close"/></svg></button></header><p class="panel-hint">点按任意歌曲立即切换；按住曲目在后续版本中排序。</p><div id="queueResults" class="result-list"></div></div></section>
+
+  <section class="overlay center-overlay" id="accountOverlay" aria-hidden="true"><div class="panel-overlay" id="accountBackdrop"></div><div class="account-modal"><button class="icon-button modal-close" id="closeAccount" aria-label="关闭"><svg><use href="#i-close"/></svg></button><span class="edition-tag">CONNECT YOUR LIBRARY</span><h2>连接网易云音乐</h2><p class="account-description">使用网易云音乐 App 扫码授权，随后同步歌单、搜索和有播放权限的曲目。</p><div class="qr-container" id="qrContainer"><div class="qr-placeholder"><svg><use href="#i-record"/></svg></div></div><p class="qr-status" id="qrStatus">点击下方按钮获取登录二维码</p><button class="panel-action full" id="startQr">获取登录二维码</button><div class="account-divider"><span>或手动导入自己的 Cookie（高级选项）</span></div><input id="cookieInput" type="password" placeholder="MUSIC_U=..." autocomplete="off"/><button class="secondary-action" id="cookieSubmit">导入 Cookie</button><button class="secondary-action danger" id="logoutBtn">清除账号登录</button><small class="privacy-note">凭据通过 Android Keystore 加密保存在设备内，不发送给 VINYL FIELD 服务器。本客户端为非官方应用，接口可能变动。</small></div></section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
