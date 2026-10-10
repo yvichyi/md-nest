@@ -24,8 +24,8 @@
     if (reducedMotion.matches) {
       motion.velocity = 0;
     } else {
-      const target = state.playing && !state.openingAudio ? 36 : 0; // 10s/turn: refined optical motion
-      const responseMs = target ? 980 : 960;
+      const target = state.playing && !state.openingAudio ? 200 : 0; // 33⅓ RPM, measured in degrees per second
+      const responseMs = target ? 1250 : 1580; // physical acceleration and graceful stop
       motion.velocity += (target - motion.velocity) * (1 - Math.exp(-dt/responseMs));
       motion.angle = (motion.angle + motion.velocity * dt / 1000) % 360;
       $('vinyl').style.transform = `rotate(${motion.angle.toFixed(3)}deg)`;
@@ -129,11 +129,11 @@
       '--cv-paper-deep':hsl(.23+luminous*.13,.845),
       '--cv-ink':hsl(.09+luminous*.09,.17),
       '--cv-muted':hsl(.1+luminous*.1,.43),
-      '--cv-accent':hsl(Math.min(.72,Math.max(.38,luminous*.76)),.53),
-      '--cv-accent-dark':hsl(Math.min(.67,Math.max(.32,luminous*.76)),.36),
-      '--cv-disc':hsl(Math.min(.7,Math.max(.34,luminous*.7)),.71),
-      '--cv-disc-light':hsl(Math.min(.6,Math.max(.27,luminous*.58)),.86),
-      '--cv-disc-deep':hsl(Math.min(.76,Math.max(.36,luminous*.78)),.53),
+      '--cv-accent':hsl(Math.min(.82,Math.max(.40,.36+luminous*.52)),.55),
+      '--cv-accent-dark':hsl(Math.min(.76,Math.max(.38,.30+luminous*.47)),.39),
+      '--cv-disc':hsl(Math.min(.80,Math.max(.41,.40+luminous*.38)),.64),
+      '--cv-disc-light':hsl(Math.min(.76,Math.max(.34,.37+luminous*.32)),.81),
+      '--cv-disc-deep':hsl(Math.min(.86,Math.max(.42,.43+luminous*.39)),.47),
       '--cv-line':`hsla(${hue} 28% 32% / .17)`
     };
     Object.entries(props).forEach(([name,value])=>root.setProperty(name,value));
