@@ -14,7 +14,7 @@
   let stageTransitionTimer = null;
   // Independent visual clock: record rotation decelerates smoothly after pause.
   // No visual movement is used as evidence of audio playback; media state remains authoritative.
-  const motion = {angle:0, velocity:0, raf:0, last:0, clockAt:0, clockPosition:0};
+  const motion = {angle:0, velocity:0, raf:0, last:0, clockAt:0, clockPosition:0, uiPaintAt:0};
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let isSeeking = false;
   let toolsTimer = 0;
@@ -33,13 +33,18 @@
     if (state.playing && !state.openingAudio) {
       const elapsed = Math.max(0, time - motion.clockAt);
       const visualPosition = motion.clockPosition + elapsed;
-      updateProgressAt(visualPosition);
+      // Keep the disc compositor at native frame rate; lyric/text layout needs only ~20 Hz.
+      if (!motion.uiPaintAt || time - motion.uiPaintAt >= 50) {
+        motion.uiPaintAt = time;
+        updateProgressAt(visualPosition);
+      }
     }
     if (state.playing || motion.velocity > 0.035) {
       motion.raf = requestAnimationFrame(animateStage);
     } else {
       motion.raf = 0;
       motion.last = 0;
+      motion.uiPaintAt = 0;
       updateProgressAt(state.position);
     }
   }
