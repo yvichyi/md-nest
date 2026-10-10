@@ -444,7 +444,7 @@ body.is-playing .ambient-cover {animation:ambient-drift 28s ease-in-out infinite
   .story-column {padding-top:clamp(34px,12dvh,52px)!important;padding-bottom:clamp(98px,27dvh,116px)!important;}
   .track-intro h1 {font-size:clamp(16px,2.17vw,20px)!important;}
   .lyric-shell {margin-top:clamp(14px,4.5dvh,24px)!important;}
-  .lyric-lines {padding:clamp(19px,8dvh,32px) 0!important;}
+  .lyric-lines {padding:clamp(6px,2.2dvh,12px) 0 clamp(42px,9dvh,80px)!important;}
   .lyric-line {font-size:clamp(12px,1.7vw,15px)!important;margin:clamp(3px,1.18dvh,5px) 0!important;}
   .lyric-line.active {font-size:clamp(19px,2.67vw,23px)!important;}
   .deck-frame {width:min(168dvh,80vw)!important;}
@@ -458,4 +458,9 @@ body.is-playing .ambient-cover {animation:ambient-drift 28s ease-in-out infinite
 /* Accessibility: stop background drift and disc animation for users requesting reduced motion. */
 @media(prefers-reduced-motion:reduce) {
   body.is-playing .ambient-cover {animation:none!important;}
+}
+
+/* Lyrics are read in the upper middle of a cinematic phone, not centered like a desktop column. */
+@media (orientation:landscape) and (min-height:431px) {
+  .lyric-lines {padding:clamp(8px,2.1dvh,17px) 0 clamp(47px,10dvh,88px)!important;}
 }
