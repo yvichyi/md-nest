@@ -256,3 +256,206 @@ body {
 
 /* A dedicated landscape mode should not offer a misleading portrait toggle. */
 #orientationBtn {display:none!important;}
+
+
+/* STUDIO POLISH V3 — screenshot-matched optical composition */
+/* Optical measurements taken from the supplied peach vinyl player:
+   title at ~12% h, lyric centre at ~44%, disc centre near 92% w / 28% h.
+   Preserve negative space: no visible cards, borders, system chrome or player toolbar. */
+:root {
+  --vf-left:max(calc(env(safe-area-inset-left,0px) + 22px),clamp(33px,11vw,170px));
+  --vf-lyric-width:min(41vw,610px);
+  --vf-ink-shadow:color-mix(in srgb,var(--cv-disc-deep) 17%,transparent);
+}
+body {
+  background:
+    radial-gradient(ellipse 36% 71% at 89% 38%,
+      color-mix(in srgb,var(--cv-disc-light) 19%,transparent),transparent 97%),
+    radial-gradient(ellipse 50% 67% at 5% 7%,
+      color-mix(in srgb,var(--cv-disc) 11%,transparent),transparent 88%),
+    linear-gradient(117deg,var(--cv-paper-light) 3%,var(--cv-paper) 76%,var(--cv-paper-deep) 100%)!important;
+}
+.ambient-cover {
+  inset:-35%!important;
+  opacity:.065!important;
+  filter:blur(98px) saturate(1.35)!important;
+  background-position:79% 39%;
+  transition:opacity 1s,background-image .9s!important;
+}
+body.is-playing .ambient-cover {animation:ambient-drift 28s ease-in-out infinite alternate!important;}
+.grain {opacity:.024!important;mix-blend-mode:multiply;}
+.story-column {
+  padding-top:clamp(36px,12.4dvh,116px)!important;
+  padding-bottom:clamp(106px,26dvh,205px)!important;
+}
+.track-intro h1 {
+  font-size:clamp(16px,1.98vw,29px)!important;
+  font-weight:570!important;
+  letter-spacing:-.03em!important;
+  color:var(--cv-ink)!important;
+}
+.track-intro p {margin-top:6px!important;color:var(--cv-muted)!important;opacity:.78!important;}
+.lyric-shell {margin-top:clamp(16px,4.65dvh,46px)!important;}
+.lyric-line {
+  font-size:clamp(12px,1.45vw,20px)!important;
+  line-height:1.41!important;
+  margin:clamp(4px,1.6dvh,11px) 0!important;
+  color:var(--cv-muted)!important;opacity:.66!important;
+  letter-spacing:-.025em!important;
+  font-weight:450!important;
+  transition:opacity .46s, color .46s, transform .52s ease!important;
+}
+.lyric-line.active {
+  font-size:clamp(19px,2.22vw,34px)!important;
+  margin:clamp(5px,1.7dvh,12px) 0!important;
+  line-height:1.27!important;
+  font-weight:720!important;
+  letter-spacing:-.039em!important;
+  opacity:1!important;
+  color:var(--cv-ink)!important;
+}
+.lyric-line.active:not(.placeholder) {
+  background:linear-gradient(90deg,
+    var(--cv-accent-dark) 0%,
+    var(--cv-accent-dark) var(--line-fill,0%),
+    var(--cv-ink) var(--line-fill,0%),
+    var(--cv-ink) 100%)!important;
+  -webkit-text-fill-color:transparent!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+}
+/* The record is deliberately cropped at the top, bottom and right; the center artwork
+   remains visible at upper-right, matching a landscape LP rather than a complete medallion. */
+.deck-frame {
+  left:92.5vw!important;top:28.5%!important;
+  width:min(168dvh,80vw,1270px)!important;
+  transform:translate(-50%,-50%)!important;
+  filter:none!important;
+}
+.deck-frame::before {
+  inset:-4.6% -6.3% -8.6% -6.3%!important;
+  border:1.2px solid color-mix(in srgb,var(--cv-disc-deep) 17%,transparent)!important;
+  transform:rotate(12deg) scale(1.075,.97)!important;
+  border-radius:47% 53% 48% 51%!important;
+  opacity:.48!important;
+}
+.deck-frame::after {
+  inset:-7.5% -9.5% -12% -9.5%!important;
+  border:1px solid color-mix(in srgb,var(--cv-disc-deep) 11%,transparent)!important;
+  transform:rotate(-13deg) scale(1.05,.92)!important;
+  border-radius:52% 49% 51% 48%!important;
+  opacity:.57!important;
+}
+.vinyl-halo {
+  inset:-2.8%!important;opacity:.35!important;filter:blur(35px)!important;
+  background:radial-gradient(circle,transparent 40%,
+    color-mix(in srgb,var(--cv-disc) 25%,transparent) 78%,transparent 100%)!important;
+}
+.vinyl-well {isolation:isolate!important;}
+.vinyl-well::after {
+  content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:3;
+  background:
+    radial-gradient(ellipse 42% 78% at 26% 11%,rgba(255,255,255,.19),transparent 89%),
+    linear-gradient(123deg,transparent 13%,rgba(255,255,255,.13) 26%,transparent 34%,transparent 74%,rgba(53,35,26,.04) 91%);
+  -webkit-mask-image:radial-gradient(circle,transparent 0 26%,#000 27%,#000 88%,transparent 99%);
+  mask-image:radial-gradient(circle,transparent 0 26%,#000 27%,#000 88%,transparent 99%);
+}
+.vinyl {
+  border:1px solid color-mix(in srgb,var(--cv-disc-light) 52%,rgba(255,255,255,.56))!important;
+  background:
+    radial-gradient(circle at 50% 50%,transparent 0 22%,rgba(255,255,255,.04) 25%,transparent 31%),
+    radial-gradient(ellipse 55% 45% at 23% 16%,rgba(255,255,255,.19),transparent 93%),
+    repeating-radial-gradient(circle at center,
+      rgba(255,255,255,.009) 0 2px,
+      color-mix(in srgb,var(--cv-disc-deep) 7%,transparent) 2.7px 3px,
+      transparent 3.5px 6.4px),
+    conic-gradient(from 10deg,
+      var(--cv-disc-light) 0deg,
+      var(--cv-disc) 53deg,
+      color-mix(in srgb,var(--cv-disc-deep) 50%,var(--cv-disc)) 105deg,
+      var(--cv-disc-light) 167deg,
+      var(--cv-disc) 235deg,
+      color-mix(in srgb,var(--cv-disc-light) 70%,var(--cv-disc)) 296deg,
+      var(--cv-disc-deep) 341deg,
+      var(--cv-disc-light) 360deg)!important;
+  box-shadow:
+    inset 0 0 2px 1px rgba(255,255,255,.34),
+    inset 0 0 30px color-mix(in srgb,var(--cv-disc-deep) 13%,transparent),
+    0 4px 17px color-mix(in srgb,var(--cv-disc-deep) 13%,transparent),
+    0 28px 82px color-mix(in srgb,var(--cv-disc-deep) 13%,transparent)!important;
+}
+.vinyl::before {
+  inset:0!important;
+  opacity:.29!important;
+  background:
+    conic-gradient(from 42deg,transparent 0deg,
+      rgba(255,255,255,.36) 23deg,transparent 47deg,
+      transparent 120deg,rgba(60,25,21,.10) 147deg,transparent 170deg,
+      transparent 252deg,rgba(255,255,255,.26) 292deg,transparent 314deg)!important;
+  mix-blend-mode:screen!important;
+}
+.vinyl::after {inset:1.8%!important;opacity:.24!important;
+  border:1px solid rgba(255,255,255,.42)!important;
+  box-shadow:inset 0 0 29px rgba(255,255,255,.09)!important;
+}
+.record-label {
+  inset:27.3%!important;
+  background:var(--cv-disc-deep)!important;
+  border:3px solid color-mix(in srgb,var(--cv-disc-deep) 68%,var(--cv-disc-light))!important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.22),
+    0 0 0 7px color-mix(in srgb,var(--cv-disc-deep) 27%,transparent),
+    0 4px 14px rgba(48,27,21,.13)!important;
+}
+.record-label::after {
+  content:"";pointer-events:none;position:absolute;inset:0;border-radius:50%;
+  box-shadow:inset 0 0 30px rgba(28,13,9,.19);
+  background:radial-gradient(circle at 19% 9%,rgba(255,255,255,.13),transparent 37%);
+}
+.record-label img {filter:saturate(.98) contrast(1.03);}
+.spindle {opacity:.28!important;width:.92%!important;height:.92%!important;}
+/* Timeline has a two-tone physical-track treatment. The active area comes from real playback position. */
+.transport {
+  bottom:max(calc(env(safe-area-inset-bottom,0px) + 27px),clamp(22px,6.1dvh,61px))!important;
+  gap:clamp(11px,2.5dvh,22px)!important;
+}
+.seek-row {height:8px!important;}
+#seekSlider {height:2px!important;opacity:.9!important;accent-color:var(--cv-accent-dark);}
+#seekSlider::-webkit-slider-thumb {
+  width:6px!important;height:6px!important;border:0!important;
+  background:var(--cv-ink)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--cv-paper-light) 70%,transparent)!important;
+}
+.transport-controls {gap:clamp(18px,4.7vw,60px)!important;}
+.transport-controls .transport-icon {opacity:.86!important;color:var(--cv-accent-dark)!important;}
+.transport-controls .transport-icon svg {width:18px!important;height:18px!important;}
+.primary-play {
+  width:clamp(47px,6.2vw,73px)!important;
+  height:clamp(40px,5.3vw,58px)!important;
+  border-radius:clamp(12px,1.8vw,23px)!important;
+  background:var(--cv-accent)!important;
+  color:var(--cv-paper-light)!important;
+  box-shadow:0 4px 15px color-mix(in srgb,var(--cv-disc-deep) 13%,transparent)!important;
+}
+.favorite-btn {margin-left:auto;opacity:.65!important;}
+.favorite-btn.is-favorite {opacity:1!important;}
+/* At extreme phone aspect ratios keep controls off the content, not compressed into it. */
+@media(orientation:landscape) and (max-height:430px) {
+  .story-column {padding-top:clamp(34px,12dvh,52px)!important;padding-bottom:clamp(98px,27dvh,116px)!important;}
+  .track-intro h1 {font-size:clamp(16px,2.17vw,20px)!important;}
+  .lyric-shell {margin-top:clamp(14px,4.5dvh,24px)!important;}
+  .lyric-lines {padding:clamp(19px,8dvh,32px) 0!important;}
+  .lyric-line {font-size:clamp(12px,1.7vw,15px)!important;margin:clamp(3px,1.18dvh,5px) 0!important;}
+  .lyric-line.active {font-size:clamp(19px,2.67vw,23px)!important;}
+  .deck-frame {width:min(168dvh,80vw)!important;}
+  .transport {gap:clamp(9px,2.2dvh,13px)!important;}
+}
+@media(orientation:landscape) and (max-width:710px) {
+  :root {--vf-left:max(calc(env(safe-area-inset-left,0px) + 15px),29px);--vf-lyric-width:43vw;}
+  .deck-frame {width:min(168dvh,85vw)!important;}
+  .transport-controls {gap:clamp(10px,3.4vw,27px)!important;}
+}
+/* Accessibility: stop background drift and disc animation for users requesting reduced motion. */
+@media(prefers-reduced-motion:reduce) {
+  body.is-playing .ambient-cover {animation:none!important;}
+}
