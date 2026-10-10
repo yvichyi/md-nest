@@ -73,7 +73,7 @@ body {
   font-size:clamp(12px,1.40vw,20px)!important;
   line-height:1.42!important;
   font-weight:450!important;margin:clamp(4px,1.25dvh,10px) 0!important;
-  color:var(--cv-muted)!important;opacity:.42!important;letter-spacing:-.012em!important;
+  color:var(--cv-muted)!important;opacity:.68!important;letter-spacing:-.012em!important;
   transform:none!important;white-space:pre-wrap!important;
 }
 .lyric-line.active {
@@ -253,3 +253,6 @@ body {
   .vinyl {will-change:auto!important;}
   .favorite-btn {transition:none!important;}
 }
+
+/* A dedicated landscape mode should not offer a misleading portrait toggle. */
+#orientationBtn {display:none!important;}
