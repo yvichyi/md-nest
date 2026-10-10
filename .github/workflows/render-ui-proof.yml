@@ -1,0 +1,68 @@
+name: Render UI layout proof
+on:
+  push:
+    branches: [vinylfield-qq-landscape-redesign]
+    paths:
+      - '.github/workflows/render-ui-proof.yml'
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare non-network sample player state
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('android-source/app/src/main/assets/index.html')
+          html=src.read_text()
+          demo=r"""
+          <script>
+          window.addEventListener('load',function(){
+            setTimeout(function(){
+              var svg='<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#122a45"/><stop offset=".48" stop-color="#6695ad"/><stop offset="1" stop-color="#e6baac"/></linearGradient></defs><rect width="512" height="512" fill="url(#g)"/><circle cx="345" cy="125" r="110" fill="#f9dbb8" opacity=".78"/><path d="M0 355 Q130 230 270 370 T512 310 V512 H0Z" fill="#162f4e" opacity=".65"/><text x="44" y="442" fill="white" font-size="58" font-family="Georgia">BLUE HOUR</text></svg>';
+              var url='data:image/svg+xml,'+encodeURIComponent(svg);
+              var pic=document.getElementById('recordCover');
+              pic.src=url;pic.hidden=false;
+              document.getElementById('recordMonogram').hidden=true;
+              document.getElementById('ambientCover').style.backgroundImage='url("'+url+'")';
+              document.getElementById('songTitle').textContent='蓝色时刻 · Blue Hour';
+              document.getElementById('songArtist').textContent='一场关于夜色的演奏';
+              var root=document.documentElement.style;
+              var colors={'--cv-paper':'#edf1f1','--cv-paper-light':'#f8faf9','--cv-paper-deep':'#dce7e9','--cv-disc':'#7dacc4','--cv-disc-light':'#bbdce4','--cv-disc-deep':'#3e728e','--cv-ink':'#203447','--cv-muted':'#70838e','--cv-accent':'#6798b5','--cv-accent-dark':'#3d6680'};
+              Object.keys(colors).forEach(function(k){root.setProperty(k,colors[k]);});
+              var lines=['风穿过安静的街道','光落在深蓝色的海','此刻我们不必说话','让旋律替时间回答','世界在缓慢旋转'];
+              document.getElementById('lyricLines').innerHTML=lines.map(function(t,i){return '<p class="lyric-line'+(i===2?' active':'')+'">'+t+'</p>';}).join('');
+              document.getElementById('currentTime').textContent='01:24';
+              document.getElementById('totalTime').textContent='03:48';
+              document.getElementById('seekSlider').value='368';
+              document.getElementById('seekSlider').style.setProperty('--progress','36.8%');
+              document.body.classList.add('is-playing');
+            },50);
+          });
+          </script>
+          """
+          html=html.replace('</body>',demo+'</body>')
+          Path('android-source/app/src/main/assets/test-preview.html').write_text(html)
+          PY
+      - name: Render 16:9 landscape, compact landscape and portrait
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          mkdir -p design-qa
+          URL="file://$(pwd)/android-source/app/src/main/assets/test-preview.html"
+          for row in "1280,720,landscape-1280x720" "844,390,landscape-844x390" "430,932,portrait-430x932"; do
+            IFS=, read -r W H NAME <<< "$row"
+            timeout 45 "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --allow-file-access-from-files --virtual-time-budget=1600 --window-size="$W,$H" --screenshot="design-qa/$NAME.png" "$URL"
+            test -s "design-qa/$NAME.png"
+          done
+          file design-qa/*.png
+      - name: Commit visual proofs
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add design-qa
+          git commit -m "test(ui): render landscape and portrait screenshots" || exit 0
+          git push
