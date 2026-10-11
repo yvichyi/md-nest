@@ -1,0 +1,574 @@
+--- a/README.md
++++ b/README.md
+@@ -1,21 +1,31 @@
+-# VinylField 0.15.0 — Tangible Record
++# VinylField 0.15.1 — Sleeve Edition
+ 
+ Android 8+ WebView interface backed by Media3 playback and a third-party Netease bridge.
+ 
+ ## This release
+ 
++- Based on `vinylfield-apk-build` commit `a19589e` (2026-10-10 22:01, Asia/Shanghai), whose packaged source is 0.15.0.
++- Serif song titles, quieter album-derived paper, clearer lyric hierarchy and more restrained record highlights and shadows.
++- Coordinated discovery, queue and account panels; 44px menu touch targets and readable two-line gesture hints in short landscape.
++- Portrait lyric folio keeps the album jacket clear of the title; long titles use a two-line limit.
++- English lyrics now display platform-provided Chinese `tlyric` / `ytlrc` subtitles under the original line. Timestamp matching preserves missing lines instead of shifting translations; plain original lyrics remain readable when the platform supplies no translation.
++- The native player, cloud bridge, Album Identity, Pressing Studio and playback controls are unchanged; frontend lyric loading and rendering now include translated lyrics.
+ - Hold the outer record groove for 290ms to enter angular song-position preview; rotate to locate, release to seek.
+ - Pointer cancel restores the existing play position; holding the label still opens the queue; swipe to skip, tap to play/pause.
+ - Stable nonrotating hit geometry, accessible conventional seek slider, 30px touch target, keyboard seek; respect reduced-motion settings.
+ - Record seek has its own compact readout, without a second generic scrub tooltip.
+ - Album-specific pressing and lyric folio remain unchanged.
+-- versionCode 150 / versionName 0.15.0.
++- versionCode 151 / versionName 0.15.1.
+ 
+ ## Verification
++
++The visual layer is `app/src/main/assets/sleeve-edition.css`, loaded after the existing 0.15.0 styles. Removing its link restores the previous visual treatment.
+ 
+ `python tests/test_tangible_record.py` exercises 4 screen/theme combinations using a REAL WAV with commit/cancel checks.
+ `python tests/test_interaction_refinement.py`, `node tests/test_playback_clock.cjs`, `python tests/test_native_queue_contract.py`, `python tests/test_queue_100.py`, `python tests/test_album_identity.py` and `python tests/test_pressing_studio.py` cover regressions.
+ 
++For this revision, the interaction, record gesture, 100-track queue and playback-clock checks run against the full stylesheet stack in Chromium on Windows. Screenshots cover warm/blue albums, 1280x720, 850x393, 740x360, 390x844, lyric folio, discovery and Chinese titles. `node --test tests/test_lyric_translations.cjs` covers exact/rounded/missing/ambiguous timestamps, duplicate translations and safe text handling. Browser checks exercise translation rendering through controlled native/network callbacks; these are not live NetEase account tests. The Android debug APK builds with JDK 17, Gradle 8.13 and SDK 35. Desktop Chromium checks do not establish physical-device font, GPU or online-platform behavior.
++
+ ## Limitations
+ 
+ Unlicensed content is not bypassed. Netease unofficial API access and QR account authorization are not guaranteed; real-device Bluetooth, notification behavior and GPU frame time require physical Android verification. This is a test/debug build, not a production-signed release.
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -7,8 +7,8 @@
+         applicationId 'dev.vinylfield.player'
+         minSdk 26
+         targetSdk 35
+-        versionCode 150
+-        versionName '0.15.0'
++        versionCode 151
++        versionName '0.15.1'
+     }
+     compileOptions {
+         sourceCompatibility JavaVersion.VERSION_17
+--- a/app/src/main/assets/app.js
++++ b/app/src/main/assets/app.js
+@@ -351,7 +351,9 @@
+ 
+   function lyricsPlaceholder(lines) {
+     state.lyrics = []; state.activeLyric = -1;
++    $('translationStatus').hidden = true;
+     const parent = $('lyricLines'); parent.replaceChildren();
++    parent.classList.remove('bilingual');
+     lines.forEach((text, i) => {
+       const p = document.createElement('p'); p.className = `lyric-line placeholder ${i === 1 ? 'active' : ''}`;
+       p.textContent = text; p.classList.toggle('cjk', /[\u3400-\u9fff]/.test(text)); parent.appendChild(p);
+@@ -375,17 +377,24 @@
+   }
+   function paintLyrics() {
+     const parent = $('lyricLines'); parent.replaceChildren();
++    parent.classList.toggle('bilingual', state.lyrics.some(line => line.translation));
+     for (let i = 0; i < state.lyrics.length; i++) {
+       const p = document.createElement('p'); p.className = 'lyric-line';
+       const content = state.lyrics[i].text;
+       p.classList.toggle('cjk', /[\u3400-\u9fff]/.test(content));
+       const base = document.createElement('span');base.className='lyric-base';base.textContent=content;
+       const ink = document.createElement('span');ink.className='lyric-ink';ink.textContent=content;ink.setAttribute('aria-hidden','true');
+-      p.append(base,ink);
++      const original = document.createElement('span');original.className='lyric-original';
++      original.append(base,ink);p.appendChild(original);
++      const translation = state.lyrics[i].translation;
++      if (translation) {
++        const subtitle = document.createElement('span');subtitle.className='lyric-translation';
++        subtitle.lang='zh-CN';subtitle.textContent=translation;p.appendChild(subtitle);
++      }
+       p.dataset.line = String(i);
+       p.tabIndex = 0;
+       p.setAttribute('role','button');
+-      p.setAttribute('aria-label', `跳转至 ${fmt(state.lyrics[i].time)}：${state.lyrics[i].text}`);
++      p.setAttribute('aria-label', `跳转至 ${fmt(state.lyrics[i].time)}：${state.lyrics[i].text}${translation ? '，译文：'+translation : ''}`);
+       parent.appendChild(p);
+     }
+     if (!state.lyrics.length) lyricsPlaceholder(['纯音乐，也值得认真聆听。', '让旋律填满房间。', '']);
+@@ -399,12 +408,22 @@
+     try {
+       const data = await api('/api/lyric', { id: track.id });
+       if (key !== lyricRequest) return;
+-      state.lyrics = parseLrc(data?.lrc?.lyric || data?.klyric?.lyric || '');
++      const originals = parseLrc(data?.lrc?.lyric || data?.klyric?.lyric || '');
++      const translated = parseLrc(data?.tlyric?.lyric || data?.ytlrc?.lyric || '');
++      state.lyrics = window.VFLyricTranslations.mergeTranslations(originals, translated);
+       state.activeLyric = -1;
+       if (!state.lyrics.length) {
+         lyricsPlaceholder(data?.nolyric ? ['纯音乐', '没有人声歌词。'] :
+           ['网易云未返回同步歌词。', '这首歌可能没有已收录的 LRC。']);
+-      } else paintLyrics();
++      } else {
++        paintLyrics();syncLyrics(state.position);
++        const hasEnglish = state.lyrics.some(line => /[A-Za-z]{2,}/.test(line.text)
++          && !/[\u3400-\u9fff]/.test(line.text));
++        const missing = hasEnglish && !state.lyrics.some(line => line.translation);
++        $('translationStatus').hidden = !missing;
++        $('translationStatus').textContent = translated.length
++          ? '中文译词时间轴未匹配，已保留原文' : '平台暂未提供中文译词';
++      }
+     } catch (error) {
+       if (key === lyricRequest) lyricsPlaceholder(['歌词请求失败', error?.message || '检查网络后重试']);
+     }
+--- a/app/src/main/assets/index.html
++++ b/app/src/main/assets/index.html
+@@ -5,10 +5,11 @@
+   <link rel="stylesheet" href="controls-refined.css" />
+   <link rel="stylesheet" href="optical-editorial.css" />
+   <link rel="stylesheet" href="tangible-record.css" />
++  <link rel="stylesheet" href="sleeve-edition.css" />
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+   <meta name="theme-color" content="#f1e9e2" />
+-  <title>VINYL FIELD — Tangible Record</title>
++  <title>VINYL FIELD — Sleeve Edition</title>
+ </head>
+ <body>
+   <svg width="0" height="0" aria-hidden="true" class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
+@@ -27,6 +28,7 @@
+   <div class="ambient-cover" id="ambientCover"></div>
+   <div class="grain"></div>
+   <main class="application">
++    <div class="sleeve-imprint" aria-hidden="true"><span>VINYL <b>FIELD</b></span><small>33⅓ RPM &nbsp; / &nbsp; STEREO</small></div>
+     <header class="topbar">
+       <button class="brand" id="homeBtn" aria-label="返回播放页">
+         <span class="brand-symbol"><span></span><span></span><span></span></span>
+@@ -72,7 +74,7 @@
+             </div>
+           </div>
+           <div class="tone-arm" id="toneArm"><div class="arm-pivot"></div><div class="arm-shaft"></div><div class="cartridge"></div></div>
+-          <div class="disc-hint" aria-hidden="true">轻触播放 · 左右切歌 · 按住外圈旋转选取进度 · 长按中心看队列</div><div class="deck-led"></div><div class="deck-model">VF — 001 <span>DIRECT DRIVE TURNTABLE</span></div>
++          <div class="disc-hint" aria-hidden="true"><span>轻触播放 · 左右切歌</span><span>外圈旋转选进度 · 长按中心看队列</span></div><div class="deck-led"></div><div class="deck-model">VF — 001 <span>DIRECT DRIVE TURNTABLE</span></div>
+           <div class="speed-control"><span>33</span><div class="speed-indicator"></div><span>45</span></div>
+         </div>
+         <div class="deck-caption"><span class="spec-dot"></span><span id="deckCaption">等待下一段旋律</span><span class="caption-right">STEREO / DIGITAL</span></div>
+@@ -94,6 +96,7 @@
+           </div>
+           <div class="lyric-bottom"></div>
+         </div>
++        <p id="translationStatus" class="translation-status" role="status" hidden></p>
+         <div class="track-meta"><div><span class="meta-caption">SOURCE</span><strong id="trackSource">YOUR LISTENING ROOM</strong></div><div><span class="meta-caption">FORMAT</span><strong id="trackFormat">STEREO</strong></div><div><span class="meta-caption">MODE</span><strong id="trackMode">REPEAT ALL</strong></div></div>
+       </div>
+       <div class="folio-credit" aria-hidden="true"><img id="folioCover" alt=""/><span>LYRIC FOLIO<small>THE LIVING RECORD · SIDE A</small></span></div>
+@@ -134,7 +137,7 @@
+         <div id="results" class="result-list"></div></div>
+       <div id="tabPlaylists" class="tab-pane" hidden><p class="panel-hint" id="playlistHint">扫码登录网易云音乐后同步你的歌单。</p><button class="panel-action" id="loadPlaylists">刷新我的歌单</button><div id="playlistResults" class="result-list"></div></div>
+       <div id="tabLocal" class="tab-pane" hidden><p class="panel-hint">本地文件不会上传服务器。支持系统文件选择器导入音频。</p><button class="panel-action" id="pickFile"><svg><use href="#i-plus"/></svg> 导入本地音乐</button><input type="file" id="browserFile" accept="audio/*" hidden/><div id="localResults" class="result-list"></div></div>
+-      <div class="panel-footer">VINYL FIELD 0.15.0 <span>NO ADS · NO TRACKING</span></div>
++      <div class="panel-footer">VINYL FIELD 0.15.1 <span>NO ADS · NO TRACKING</span></div>
+     </div>
+   </section>
+ 
+@@ -145,6 +148,7 @@
+   <script src="playback-clock.js"></script>
+   <script src="album-identity.js"></script>
+   <script src="pressing-studio.js"></script>
++  <script src="lyric-translations.js"></script>
+   <script src="app.js"></script>
+ </body>
+ </html>
+--- /dev/null
++++ b/app/src/main/assets/lyric-translations.js
+@@ -0,0 +1,54 @@
++/* Align platform-provided translated LRC by time, never by row number.
++   Missing translations stay missing; this module does not generate text. */
++(function (root) {
++  'use strict';
++  function mergeTranslations(original, translated, tolerance = 200) {
++    const groups = new Map();
++    for (const line of translated || []) {
++      if (!Number.isFinite(line?.time) || !String(line.text || '').trim()) continue;
++      if (!groups.has(line.time)) groups.set(line.time, new Set());
++      groups.get(line.time).add(String(line.text).trim());
++    }
++    const times = [...groups.keys()].sort((a, b) => a - b);
++    const originals = [...new Set((original || []).map(line => line.time))]
++      .filter(Number.isFinite).sort((a, b) => a - b);
++    const matches = new Map();
++    const used = new Set();
++    // Reserve every exact match before considering small timestamp rounding differences.
++    for (const time of originals) {
++      if (groups.has(time)) { matches.set(time, time); used.add(time); }
++    }
++    const budget = Math.max(0, Math.min(500, Number(tolerance) || 0));
++    const remainingOriginals = originals.filter(time => !matches.has(time));
++    const remainingTranslations = times.filter(time => !used.has(time));
++    function closest(sorted, time) {
++      let low = 0, high = sorted.length;
++      while (low < high) {
++        const middle = (low + high) >>> 1;
++        if (sorted[middle] < time) low = middle + 1; else high = middle;
++      }
++      const candidates = [sorted[low - 1], sorted[low]]
++        .filter(value => value !== undefined
++          && Math.abs(value - time) <= budget)
++        .sort((a, b) => Math.abs(a - time) - Math.abs(b - time));
++      // An equally close pair is ambiguous: leave the original line untranslated.
++      if (!candidates.length || (candidates.length > 1
++          && Math.abs(candidates[0] - time) === Math.abs(candidates[1] - time))) return undefined;
++      return candidates[0];
++    }
++    for (const time of remainingOriginals) {
++      const translatedTime = closest(remainingTranslations, time);
++      // Mutual nearest neighbours prevent an earlier verse stealing a later one's subtitle.
++      if (translatedTime !== undefined && closest(remainingOriginals, translatedTime) === time)
++        matches.set(time, translatedTime);
++    }
++    return (original || []).map(line => {
++      const matched = matches.get(line.time);
++      const text = matched === undefined ? '' : [...groups.get(matched)].join('\n');
++      return { ...line, translation: text === line.text ? '' : text };
++    });
++  }
++  const api = { mergeTranslations };
++  if (typeof module !== 'undefined' && module.exports) module.exports = api;
++  else root.VFLyricTranslations = api;
++})(typeof window !== 'undefined' ? window : globalThis);
+--- /dev/null
++++ b/app/src/main/assets/sleeve-edition.css
+@@ -0,0 +1,250 @@
++/* VinylField 0.15.1 — Sleeve Edition.
++   A visual finish on 0.15.0. Album Identity, Pressing Studio, the native queue,
++   record gestures and playback clocks remain the owners of their existing state. */
++:root {
++  --sleeve-display: 'Georgia', 'Noto Serif CJK SC', 'Noto Serif', 'Songti SC', serif;
++  --sleeve-hairline: color-mix(in srgb, var(--cv-ink) 12%, transparent);
++  --sleeve-secondary: color-mix(in srgb, var(--cv-ink) 66%, var(--cv-paper));
++}
++body {
++  background:
++    radial-gradient(ellipse 48% 65% at 81% 39%,
++      color-mix(in srgb, var(--cv-disc) 16%, transparent), transparent 76%),
++    linear-gradient(112deg, var(--cv-paper-light), var(--cv-paper) 66%,
++      color-mix(in srgb, var(--cv-paper) 86%, var(--cv-disc))) !important;
++}
++.ambient-cover { opacity: .075 !important; }
++.grain { opacity: .027 !important; }
++.sleeve-imprint {
++  position: absolute; z-index: 11;
++  top: clamp(24px, 4.6vh, 38px); left: var(--room-gutter);
++  display: flex; align-items: center; gap: 19px;
++  color: var(--cv-ink); pointer-events: none;
++}
++.sleeve-imprint > span {
++  font: 500 10px/1.3 var(--room-text); letter-spacing: .20em;
++}
++.sleeve-imprint b { font-weight: 750; }
++.sleeve-imprint small {
++  font: 450 8px/1.3 var(--room-text); letter-spacing: .11em;
++  color: var(--sleeve-secondary); border-left: 1px solid var(--sleeve-hairline);
++  padding-left: 19px;
++}
++.topbar { top: clamp(20px, 3.7vh, 31px) !important; }
++.tools-toggle {
++  background: transparent !important; border: 1px solid var(--sleeve-hairline) !important;
++  border-radius: 50% !important; width: 44px !important; height: 44px !important;
++  box-shadow: none !important; opacity: .84 !important;
++}
++.tools-toggle:hover { background: color-mix(in srgb, var(--cv-ink) 5%, transparent) !important; }
++.focus-toggle {
++  top: clamp(20px, 3.7vh, 31px) !important;
++  left: auto !important; right: calc(var(--room-gutter) + 66px) !important;
++  min-height: 44px; padding: 0 14px !important;
++  border: 0 !important; border-radius: 0 !important;
++  color: var(--sleeve-secondary) !important; background: transparent !important;
++  font-size: 11px !important; font-weight: 550 !important; letter-spacing: .02em !important;
++}
++.focus-toggle::after { display: none !important; }
++.focus-toggle[aria-pressed='true'] { color: var(--cv-accent-dark) !important; }
++.focus-toggle:hover { color: var(--cv-ink) !important; }
++.track-intro::before {
++  font-size: 9px !important; letter-spacing: .23em !important;
++  color: var(--cv-accent-dark) !important; opacity: .78 !important;
++  margin-bottom: 15px !important;
++}
++.track-intro h1 {
++  font-family: var(--sleeve-display) !important;
++  font-size: clamp(28px, 3.5vw, 47px) !important;
++  font-weight: 400 !important; line-height: 1.1 !important;
++  letter-spacing: -.034em !important; text-wrap: balance;
++  margin-bottom: 12px !important;
++  display: -webkit-box; -webkit-box-orient: vertical;
++  -webkit-line-clamp: 2; overflow: hidden;
++}
++.track-intro p {
++  color: var(--sleeve-secondary) !important;
++  font-size: clamp(12px, 1.1vw, 15px) !important;
++  line-height: 1.45 !important; font-weight: 450 !important;
++  letter-spacing: .018em !important; opacity: 1 !important;
++}
++.story-column { padding-top: clamp(95px, 15.7vh, 130px) !important; }
++.lyric-shell { margin-top: clamp(25px, 4.8vh, 43px) !important; }
++.lyric-line {
++  font-size: clamp(17px, 1.75vw, 24px) !important;
++  font-weight: 430 !important; line-height: 1.55 !important;
++  letter-spacing: -.013em !important;
++}
++.lyric-line.active {
++  font-size: clamp(19px, 1.95vw, 27px) !important;
++  font-weight: 600 !important; letter-spacing: -.025em !important;
++  color: var(--cv-accent-dark) !important;
++}
++.lyric-line.nearby { opacity: .57 !important; }
++.lyric-line.distant { opacity: .30 !important; }
++.lyric-original { display: block; position: relative; }
++.lyric-translation {
++  display: block; margin-top: 4px;
++  font-size: max(12px, .62em); font-weight: 450; line-height: 1.6;
++  letter-spacing: .015em; white-space: pre-line;
++  color: var(--cv-ink); -webkit-text-fill-color: currentColor; opacity: .75;
++}
++.lyric-line.active .lyric-translation { color: var(--cv-accent-dark); opacity: 1; }
++.translation-status {
++  flex: none; margin: 6px 0 0; font-size: 10px; line-height: 1.4;
++  color: var(--sleeve-secondary); letter-spacing: .02em;
++}
++.translation-status[hidden] { display: none !important; }
++.folio-orbits { opacity: .095 !important; }
++.deck-frame::before {
++  border-color: color-mix(in srgb, var(--cv-accent-dark) 13%, transparent) !important;
++  box-shadow: none !important; opacity: .65 !important;
++}
++.vinyl-halo { opacity: .21 !important; filter: blur(24px) !important; }
++.vinyl[data-material] {
++  background-image:
++    radial-gradient(ellipse 44% 32% at 32% 12%, rgba(255,255,255,.33), transparent 94%),
++    radial-gradient(ellipse 38% 42% at 82% 84%, rgba(25,16,22,.11), transparent 88%),
++    var(--vf-pressing-image),
++    radial-gradient(circle, var(--cv-disc-light), var(--cv-disc-deep)) !important;
++  box-shadow:
++    inset 0 0 0 1px rgba(255,255,255,.72),
++    inset 0 0 0 5px rgba(255,255,255,.055),
++    inset -8px -17px 35px rgba(28,22,27,.15),
++    inset 12px 18px 37px rgba(255,255,255,.18),
++    0 3px 5px rgba(43,29,34,.065),
++    0 25px 43px color-mix(in srgb, var(--cv-disc-deep) 19%, transparent) !important;
++}
++.vinyl[data-material] .groove { opacity: .50 !important; }
++.vinyl[data-material]::before { opacity: .39 !important; }
++.vinyl[data-material] .record-label {
++  inset: 26% !important;
++  border: 1px solid rgba(255,255,255,.8) !important;
++  box-shadow: 0 0 0 2px rgba(43,31,35,.17),
++    0 0 0 6px color-mix(in srgb, var(--vf-resin-shade) 52%, transparent),
++    0 0 0 7px rgba(255,255,255,.38),
++    0 2px 7px rgba(20,12,16,.13) !important;
++}
++.disc-hint {
++  color: var(--sleeve-secondary) !important; opacity: .77 !important;
++  font-size: 9px !important; font-weight: 450 !important;
++  letter-spacing: .015em !important; gap: 7px !important;
++}
++.disc-hint::before { font-size: 16px !important; opacity: .65; }
++.control-surface .seek-row span {
++  font-weight: 500 !important; color: var(--sleeve-secondary) !important;
++  opacity: 1 !important; letter-spacing: .035em !important;
++}
++#seekSlider {
++  --ic-track: color-mix(in srgb, var(--cv-ink) 14%, transparent);
++}
++.primary-play {
++  box-shadow: inset 0 1px 0 rgba(255,255,255,.13),
++    0 6px 16px color-mix(in srgb, var(--cv-accent-dark) 13%, transparent) !important;
++}
++.transport-controls .transport-icon { opacity: .76 !important; }
++.transport-controls .transport-icon:hover { opacity: 1 !important; }
++.stage.lyrics-focus .story-column { padding-top: clamp(104px, 16vh, 136px) !important; }
++.stage.lyrics-focus .folio-credit {
++  border-left-color: var(--sleeve-hairline) !important;
++  top: clamp(123px, 22vh, 181px) !important;
++}
++.stage.lyrics-focus .folio-credit img {
++  border-radius: 1px !important;
++  box-shadow: 0 3px 5px rgba(31,22,26,.08),
++    0 20px 32px rgba(31,22,26,.1) !important;
++}
++/* The drawers use the same quiet paper, hairlines and typography as the stage. */
++.panel-overlay {
++  background: color-mix(in srgb, var(--cv-ink) 28%, transparent) !important;
++  backdrop-filter: blur(9px) !important; -webkit-backdrop-filter: blur(9px) !important;
++}
++.library-panel, .account-modal {
++  background: var(--cv-paper-light) !important;
++  border: 1px solid color-mix(in srgb, white 68%, var(--cv-paper)) !important;
++  box-shadow: -12px 0 60px rgba(35,25,30,.12) !important;
++  border-radius: 16px !important;
++}
++.panel-header small { letter-spacing: .22em !important; font-weight: 550 !important; font-size: 9px !important; }
++.panel-header h2, .account-modal h2 {
++  font-family: var(--sleeve-display) !important;
++  font-weight: 500 !important; letter-spacing: -.025em !important;
++}
++.panel-header .icon-button {
++  border: 1px solid var(--sleeve-hairline) !important; border-radius: 50% !important;
++  box-shadow: none !important; background: transparent !important;
++}
++.tabs { border-radius: 8px !important; background: color-mix(in srgb,var(--cv-ink) 4%,transparent) !important; }
++.tab { border-radius: 6px !important; font-weight: 500 !important; }
++.tab.active {
++  color: var(--cv-accent-dark) !important; background: var(--cv-paper-light) !important;
++  box-shadow: 0 1px 5px rgba(35,25,30,.055) !important; font-weight: 650 !important;
++}
++.search-input {
++  border: 1px solid var(--sleeve-hairline) !important; border-radius: 10px !important;
++  background: color-mix(in srgb, white 42%, var(--cv-paper-light)) !important;
++}
++.search-input:focus-within { border-color: var(--cv-accent-dark) !important; }
++.library-welcome {
++  border: 0 !important; border-radius: 0 !important;
++  background: transparent !important; padding-left: 0 !important; padding-right: 0 !important;
++}
++.library-welcome h3 { font-family: var(--sleeve-display) !important; font-weight: 500 !important; line-height: 1.37 !important; }
++.welcome-orbit { opacity: .45 !important; }
++.quick-search button, .welcome-actions button, #queueLocate { border-radius: 6px !important; }
++.result { border-radius: 9px !important; }
++.result-art { border-radius: 4px !important; }
++.result-copy strong { font-weight: 550 !important; letter-spacing: -.01em !important; }
++.result-copy span { color: var(--sleeve-secondary) !important; }
++.result.current { background: color-mix(in srgb, var(--cv-accent) 8%, transparent) !important; }
++.panel-footer { color: var(--sleeve-secondary) !important; }
++.panel-footer > span { color: var(--sleeve-secondary) !important; opacity: .7; }
++@media (orientation: landscape) and (max-height: 540px) {
++  .sleeve-imprint { top: 20px; }
++  .sleeve-imprint small { display: none; }
++  .sleeve-imprint > span { font-size: 8px; letter-spacing: .15em; }
++  .topbar, .focus-toggle { top: 12px !important; }
++  .tools-toggle { width: 44px !important; height: 44px !important; }
++  .focus-toggle { min-height: 44px; font-size: 10px !important; right: calc(var(--room-gutter) + 46px) !important; }
++  .story-column { padding-top: 53px !important; }
++  .track-intro::before { display: none !important; }
++  .track-intro h1 { font-size: clamp(22px, 3.1vw, 29px) !important; margin-bottom: 5px !important; }
++  .track-intro p { font-size: 10px !important; }
++  .lyric-shell { margin-top: 14px !important; }
++  .lyric-line { font-size: clamp(13px, 1.85vw, 17px) !important; line-height: 1.38 !important; }
++  .lyric-line.active { font-size: clamp(15px, 2.05vw, 19px) !important; }
++  .disc-hint { max-width: 96%; font-size: 9px !important; letter-spacing: 0 !important; flex-direction: column; gap: 3px !important; line-height: 1.35 !important; text-align: center; }
++  .disc-hint::before { display: none; }
++  .stage.lyrics-focus .story-column { padding-top: 58px !important; }
++  .stage.lyrics-focus .folio-credit { top: 75px !important; }
++}
++@media (orientation: portrait) {
++  .sleeve-imprint { left: var(--room-gutter); top: 29px; }
++  .sleeve-imprint > span { font-size: 9px; letter-spacing: .13em; }
++  .sleeve-imprint small { display: none; }
++  .topbar { top: 17px !important; }
++  .focus-toggle { top: 17px !important; right: calc(var(--room-gutter) + 48px) !important; min-height: 44px; padding: 0 6px !important; font-size: 10px !important; }
++  .focus-direction { display: none !important; }
++  .deck-frame { max-width: calc(100vw - 64px) !important; }
++  .story-column { padding-top: 13px !important; }
++  .track-intro::before { font-size: 8px !important; margin-bottom: 10px !important; }
++  .track-intro h1 { font-size: clamp(28px, 8vw, 35px) !important; line-height: 1.13 !important; margin-bottom: 8px !important; }
++  .track-intro p { font-size: 12px !important; }
++  .lyric-shell { margin-top: 19px !important; }
++  .lyric-line { font-size: 17px !important; line-height: 1.55 !important; }
++  .lyric-line.active { font-size: 19px !important; }
++  .stage.lyrics-focus .story-column { padding-top: 110px !important; }
++  .stage.lyrics-focus .track-intro { width: 100%; box-sizing: border-box; padding-right: 90px !important; }
++  .stage.lyrics-focus .track-intro h1 { max-width: 100% !important; font-size: 28px !important; line-height: 1.17 !important; }
++  .stage.lyrics-focus .folio-credit { top: 114px !important; }
++  .library-panel { border-radius: 16px 16px 0 0 !important; }
++}
++@media (orientation: portrait) and (max-height: 720px) {
++  .track-intro h1 { font-size: 26px !important; }
++  .lyric-shell { margin-top: 10px !important; }
++  .lyric-line { font-size: 15px !important; }
++  .lyric-line.active { font-size: 17px !important; }
++}
++@media (prefers-reduced-motion: reduce) {
++  .sleeve-imprint, .tools-toggle, .focus-toggle { transition: none !important; }
++}
+--- a/tests/test_interaction_refinement.py
++++ b/tests/test_interaction_refinement.py
+@@ -6,11 +6,11 @@
+ 
+ def bundle(theme='warm'):
+     html=(ROOT/'index.html').read_text()
+-    for fn in ('ui-bundle.css','controls-refined.css','optical-editorial.css','tangible-record.css'):
++    for fn in ('ui-bundle.css','controls-refined.css','optical-editorial.css','tangible-record.css','sleeve-edition.css'):
+         html=html.replace(f'<link rel="stylesheet" href="{fn}" />','<style>'+ (ROOT/fn).read_text()+'</style>')
+     imgs={name:'data:image/jpeg;base64,'+base64.b64encode((ROOT/name).read_bytes()).decode() for name in ('demo-coffee-cover.jpg','demo-orbit-cover.jpg')}
+     for k,v in imgs.items():html=html.replace('"'+k+'"','"'+v+'"')
+-    for fn in ('playback-clock.js','album-identity.js','pressing-studio.js','app.js'):
++    for fn in ('playback-clock.js','album-identity.js','pressing-studio.js','lyric-translations.js','app.js'):
+         js=(ROOT/fn).read_text()
+         if fn=='app.js':
+             js=js.replace("new URLSearchParams(location.search).get('demo')",repr(theme))
+@@ -68,6 +68,7 @@
+     errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+     page.set_content(bundle(),wait_until='load')
+     page.locator('#browserFile').set_input_files(str(fixture))
++    page.wait_for_function("document.querySelector('#totalTime').textContent !== '00:00' && VF.motionSnapshot().position > 0", timeout=15000)
+     page.wait_for_timeout(600)
+     assert page.evaluate('document.body.classList.contains("is-playing")')
+     current=page.evaluate('window.VF.motionSnapshot().position')
+--- /dev/null
++++ b/tests/test_lyric_translations.cjs
+@@ -0,0 +1,43 @@
++const assert = require('node:assert/strict');
++const test = require('node:test');
++const {mergeTranslations} = require('../app/src/main/assets/lyric-translations.js');
++const original = [
++  {time:1000,text:'Rain at the window'},
++  {time:4000,text:'A quiet room'},
++  {time:7000,text:'Time moves on'}
++];
++test('partial translations align by timestamp without shifting later verses', () => {
++  const translated = [{time:1000,text:'窗边的雨'}, {time:7000,text:'时间向前'}];
++  const result = mergeTranslations(original, translated);
++  assert.deepEqual(result.map(line=>line.translation), ['窗边的雨','','时间向前']);
++  assert.equal(original[0].translation, undefined);
++});
++test('small rounding differences match; distant or ambiguous lines do not', () => {
++  assert.equal(mergeTranslations(original,[{time:1120,text:'窗边的雨'}])[0].translation,'窗边的雨');
++  assert.equal(mergeTranslations(original,[{time:1800,text:'不应匹配'}])[0].translation,'');
++  assert.equal(mergeTranslations(original,[{time:900,text:'左'},{time:1100,text:'右'}])[0].translation,'');
++});
++test('exact timestamps are reserved before approximate matches', () => {
++  const result=mergeTranslations([{time:1000,text:'first'},{time:1100,text:'second'}],[{time:1100,text:'第二句'}]);
++  assert.deepEqual(result.map(line=>line.translation),['','第二句']);
++});
++test('one translated timestamp is not reused for distinct nearby original rows', () => {
++  const result=mergeTranslations([{time:1000,text:'first'},{time:1200,text:'second'}],[{time:1090,text:'一句'}]);
++  assert.equal(result.filter(line=>line.translation).length,1);
++});
++test('a later original keeps the subtitle that is closer to it', () => {
++  const rows=[{time:1000,text:'first'},{time:1200,text:'second'}];
++  assert.deepEqual(mergeTranslations(rows,[{time:1190,text:'第二句'}]).map(line=>line.translation),['','第二句']);
++  assert.deepEqual(mergeTranslations(rows,[{time:1100,text:'归属不明'}]).map(line=>line.translation),['','']);
++});
++test('repeated timestamps share subtitles and duplicate translated text is removed', () => {
++  const result=mergeTranslations([{time:1000,text:'voice one'},{time:1000,text:'voice two'}],
++    [{time:1000,text:'第一声'},{time:1000,text:'第一声'},{time:1000,text:'第二声'}]);
++  assert.deepEqual(result.map(line=>line.translation),['第一声\n第二声','第一声\n第二声']);
++});
++test('missing, malformed, identical and literal markup translations are safe data', () => {
++  assert.deepEqual(mergeTranslations(original,[]).map(line=>line.translation),['','','']);
++  assert.equal(mergeTranslations(original,[{time:NaN,text:'invalid'}])[0].translation,'');
++  assert.equal(mergeTranslations(original,[{time:1000,text:original[0].text}])[0].translation,'');
++  assert.equal(mergeTranslations(original,[{time:1000,text:'<img src=x>'}])[0].translation,'<img src=x>');
++});
+--- a/tests/test_tangible_record.py
++++ b/tests/test_tangible_record.py
+@@ -5,11 +5,11 @@
+ OUT=Path('/mnt/data/VinylField-0.15.0-evidence');OUT.mkdir(exist_ok=True)
+ def bundle(theme):
+     html=(ROOT/'index.html').read_text()
+-    for fn in ('ui-bundle.css','controls-refined.css','optical-editorial.css','tangible-record.css'):
++    for fn in ('ui-bundle.css','controls-refined.css','optical-editorial.css','tangible-record.css','sleeve-edition.css'):
+         html=html.replace(f'<link rel="stylesheet" href="{fn}" />','<style>'+ (ROOT/fn).read_text()+'</style>')
+     imgs={name:'data:image/jpeg;base64,'+base64.b64encode((ROOT/name).read_bytes()).decode() for name in ('demo-coffee-cover.jpg','demo-orbit-cover.jpg')}
+     for name,data in imgs.items(): html=html.replace('"'+name+'"','"'+data+'"')
+-    for fn in ('playback-clock.js','album-identity.js','pressing-studio.js','app.js'):
++    for fn in ('playback-clock.js','album-identity.js','pressing-studio.js','lyric-translations.js','app.js'):
+         js=(ROOT/fn).read_text()
+         if fn=='app.js':
+             js=js.replace("new URLSearchParams(location.search).get('demo')",repr(theme))
+@@ -30,6 +30,7 @@
+         errors=[];page.on('pageerror',lambda err:errors.append(str(err)))
+         page.set_content(bundle(theme),wait_until='load',timeout=30000)
+         page.locator('#browserFile').set_input_files(str(fixture))
++        page.wait_for_function("document.querySelector('#totalTime').textContent !== '00:00' && VF.motionSnapshot().position > 0", timeout=15000)
+         page.wait_for_timeout(450)
+         info=page.locator('.vinyl-well').bounding_box(); assert info,(w,h)
+         cx=info['x']+info['width']/2;cy=info['y']+info['height']/2;r=info['width']/2
